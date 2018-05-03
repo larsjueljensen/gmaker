@@ -25,6 +25,13 @@ Math.degrees = function(radians) {
 };
 
 function empty(d) { return null; };
+function append(d) {
+    if (Array.isArray(d[0])) {
+        return d[0].concat(d[2]);
+    }
+    return [d[0], d[2]];
+};
+
 function processLine(d) {
 
     if (d[0] != null) {
@@ -32,10 +39,14 @@ function processLine(d) {
     }
 
     if (d[2] != null) {
-        return [d[2]].concat(d[4]);
+        return [d[2]].concat(d[3]);
     }
 
-    return d[4];
+    return d[3];
+}
+function logid(d) {
+    console.log(d);
+    return d;
 }
 
 let numberedParams = {};
@@ -45,7 +56,11 @@ let numberedParams = {};
 @lexer lexer
 
 line ->
-    block_delete:? _ linenumber:? _ word:* EOL {% processLine %}
+    block_delete:? _ linenumber:? words EOL {% processLine %}
+
+words ->
+    word {% id %}
+    | words _ word {% append %}
 
 block_delete ->
     "/" {% id %}

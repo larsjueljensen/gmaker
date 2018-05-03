@@ -27,6 +27,13 @@ Math.degrees = function(radians) {
 };
 
 function empty(d) { return null; };
+function append(d) {
+    if (Array.isArray(d[0])) {
+        return d[0].concat(d[2]);
+    }
+    return [d[0], d[2]];
+};
+
 function processLine(d) {
 
     if (d[0] != null) {
@@ -34,10 +41,14 @@ function processLine(d) {
     }
 
     if (d[2] != null) {
-        return [d[2]].concat(d[4]);
+        return [d[2]].concat(d[3]);
     }
 
-    return d[4];
+    return d[3];
+}
+function logid(d) {
+    console.log(d);
+    return d;
 }
 
 let numberedParams = {};
@@ -56,9 +67,9 @@ var grammar = {
     {"name": "line$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
     {"name": "line$ebnf$2", "symbols": ["linenumber"], "postprocess": id},
     {"name": "line$ebnf$2", "symbols": [], "postprocess": function(d) {return null;}},
-    {"name": "line$ebnf$3", "symbols": []},
-    {"name": "line$ebnf$3", "symbols": ["line$ebnf$3", "word"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "line", "symbols": ["line$ebnf$1", "_", "line$ebnf$2", "_", "line$ebnf$3", "EOL"], "postprocess": processLine},
+    {"name": "line", "symbols": ["line$ebnf$1", "_", "line$ebnf$2", "words", "EOL"], "postprocess": processLine},
+    {"name": "words", "symbols": ["word"], "postprocess": id},
+    {"name": "words", "symbols": ["words", "_", "word"], "postprocess": append},
     {"name": "block_delete", "symbols": [{"literal":"/"}], "postprocess": id},
     {"name": "EOL", "symbols": [(lexer.has("EOL") ? {type: "EOL"} : EOL)], "postprocess": empty},
     {"name": "linenumber", "symbols": [(lexer.has("linenumber_command") ? {type: "linenumber_command"} : linenumber_command), "int_or_float"], "postprocess": function (d) { return {command: d[0].value, value: d[1]}; }},
