@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+    <head>
+        <title>GMaker V1.0.0</title>
+        <style>
+            body {
+                width: 100%;
+                height: 100%;
+                position: absolute;
+            }
+            div {
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                bottom: 10px;
+                left: 350px;
+                border: 1px solid black;
+                overflow: auto;
+                background-clip: padding-box;
+            }
+            #surface {
+                width: 100%;
+                height: 100%;
+            }
+        </style>
+        <script src="../node_modules/paper/dist/paper-full.js"></script>
+
+        <script type="text/paperscript" canvas="surface">
+
+            // Create a Paper.js Path to draw a line into it:
+        	var path = new Path();
+
+        	// Give the stroke a color
+        	path.strokeColor = 'black';
+            path.strokeWidth = 0.5;
+        	var start = new Point(100, 100);
+
+        	// Move to start and draw a line from there
+        	path.moveTo(start);
+
+        	// Note the plus operator on Point objects.
+        	// PaperScript does that for us, and much more!
+        	path.lineTo(start + [ 100, -50 ]);
+            path.selected = true;
+
+        </script>
+    </head>
+    <body>
+        <div>
+            <canvas id="surface"></canvas>
+        </div>
+    </body>
+</html>

@@ -1,0 +1,31 @@
+
+/* G-Code EBNF grammar */
+line ::= ((block-delete)? (line-number) (word | parameter-setting | comment)*)? EOL
+word ::= word-letter value
+value ::= number | expression
+expression ::= "[" number | parameter | math-operator | expression "]"
+math-operator ::= binary-operator | function
+binary-operator ::= "**" | "*" | "/" | 
+                    "MOD" | "+" | "-" |
+                    "EQ" | "NE" | "GT" |
+                    "GE" | "LT" | "LE" |
+                    "AND" | "OR" | "XOR"
+function ::= function-name expression
+function-name ::= "ATAN" | "ABS" | "ACOS" | "ASIN" |
+                  "COS" | "EXP" | "FIX" | "FUP" |
+                  "ROUND" | "LN" | "SIN" | "SQRT" |
+                  "TAN" | "EXISTS"
+parameter-setting ::= <tbd>
+parameter ::= numbered-parameter | named-local-parameter | named-global-parameter
+numbered-parameter ::= "#" unsigned-integer
+named-local-parameter ::= "#<" parameter-name ">"
+named-global-parameter ::= "#<_" parameter-name ">"
+parameter-name ::= [a-zA-Z0-9_]+
+number ::= [+\-]+ digit* ("." digit*)?
+digit ::= [0-9]
+comment ::= "(" .*? ")" | ";" .*? EOL
+word-letter ::= [ABCDFGHIJKLMNPQRSTUVWXYZ]
+line-number ::= "N" unsigned-integer
+unsigned-integer ::= [0-9]+
+block-delete ::= "/"
+EOL ::= #x0A | #x0D | #x0A#x0D

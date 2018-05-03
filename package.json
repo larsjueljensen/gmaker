@@ -1,0 +1,16 @@
+{
+  "name": "gmaker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "moo": "^0.4.3",
+    "nearley": "^2.13.0",
+    "paper": "^0.11.5"
+  }
+}
