@@ -1,10 +1,18 @@
 @builtin "whitespace.ne"
 
 @{%
-const lexer = require("moo").compile({
+
+let numberedParams = {
+    3: 45
+};
+
+const lexer = moo.compile({
+    comment: /\(.*?\)/,
     expstart: /\[/,
     expend: /\]/,
-    operator: /\*\*|[\+\-\*\/]|OR|XOR|AND|MOD|EQ|NE|GT|GE|LT|LE/,
+    paramstart: '#',
+    equals: "=",
+    operator: /\*\*|\+|\-|\*|\/|OR|XOR|AND|MOD|EQ|NE|GT|GE|LT|LE/,
     function: ['ATAN','ABS','ACOS','ASIN','COS','EXP','FIX','FUP','ROUND','LN','SIN','SQRT','TAN','EXISTS'],
     linenumber_command: 'N',
     command: /[ABCDFGHIJKLMPQRSTUVWXYZ]/,
@@ -24,55 +32,88 @@ Math.degrees = function(radians) {
   return radians * 180 / Math.PI;
 };
 
-function empty(d) { return null; };
+function empty(d) {
+    return null;
+}
+
+function logid(prefix) {
+    return function (d) {
+        console.log(prefix, d);
+        return d;
+    };
+}
+
+// Appends to list
 function append(d) {
     if (Array.isArray(d[0])) {
         return d[0].concat(d[2]);
     }
     return [d[0], d[2]];
-};
+}
 
+function getparam(d) {
+    return numberedParams[String(d[1])] | 0.0;
+}
+
+// Returns the result of one parsed line
 function processLine(d) {
+
+    logid("processLine")(d);
 
     if (d[0] != null) {
         return [];
     }
 
     if (d[2] != null) {
-        return [d[2]].concat(d[3]);
+        return [d[2]].concat(d[4]);
     }
 
-    return d[3];
-}
-function logid(d) {
-    console.log(d);
-    return d;
+    if (! Array.isArray(d[4])) {
+        return [d[4]];
+    }
+
+    return d[4];
 }
 
-let numberedParams = {};
 
 %}
 
 @lexer lexer
 
+# This is one line of GCODE. It consists of the following parts:
+# * An optional block delete character (/) which acts as a deactivate switch
+# * An optional line number (Ie. N200)
+# * One or more line items (Optionally space separated)
+# * End of line (newline)
 line ->
-    block_delete:? _ linenumber:? words EOL {% processLine %}
-
-words ->
-    word {% id %}
-    | words _ word {% append %}
+    block_delete:? linenumber:? line_items EOL {% processLine %}
 
 block_delete ->
     "/" {% id %}
 
-EOL ->
-    %EOL {% empty %}
-
 linenumber ->
-    %linenumber_command int_or_float {% function (d) { return {command: d[0].value, value: d[1]}; } %}
+    _ %linenumber_command int_or_float _ {% function (d) { return {command: d[1].value, value: d[2]}; } %}
+
+line_items ->
+    line_item {% id %}
+    | line_items _ line_item {% append %}
+
+line_item ->
+    comment {% id %}
+    | parameter_setting {% id %}
+    | word {% id %}
 
 word ->
     %command _ number {% function (d) { return {command: d[0].value, value: d[2]}; } %}
+
+parameter_start ->
+    %paramstart {% id %}
+
+parameter_setting ->
+    parameter_start parameter_index _ %equals _ number {% function (d) { return {command: d[0].value + d[1], value: d[5], pos: lexer}; }  %}
+
+comment ->
+    %comment {% function (d) { return {command: 'COMMENT', value: d[0].value}; } %}
 
 gcode_expression ->
     "[" _ expression _ "]" {% (d) => d[2] %}
@@ -135,7 +176,25 @@ number ->
 primary ->
     int_or_float {% id %}
     | gcode_expression {% id %}
+    | parameter_expression {% id %}
+
+parameter_expression ->
+    parameter_start parameter_index {% getparam %}
+
+parameter_index ->
+    int {% id %}
+    | gcode_expression {% id %}
+    | parameter_expression {% id %}
 
 int_or_float ->
+    int {% id %}
+    | float {% id %}
+
+int ->
     %int {% (d) => parseInt(d[0]) %}
-    | %float {% (d) => parseFloat(d[0]) %}
+
+float ->
+    %float {% (d) => parseFloat(d[0]) %}
+
+EOL ->
+    %EOL {% empty %}

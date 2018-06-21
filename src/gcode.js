@@ -3,10 +3,18 @@
 (function () {
 function id(x) { return x[0]; }
 
-const lexer = require("moo").compile({
+
+let numberedParams = {
+    3: 45
+};
+
+const lexer = moo.compile({
+    comment: /\(.*?\)/,
     expstart: /\[/,
     expend: /\]/,
-    operator: /\*\*|[\+\-\*\/]|OR|XOR|AND|MOD|EQ|NE|GT|GE|LT|LE/,
+    paramstart: '#',
+    equals: "=",
+    operator: /\*\*|\+|\-|\*|\/|OR|XOR|AND|MOD|EQ|NE|GT|GE|LT|LE/,
     function: ['ATAN','ABS','ACOS','ASIN','COS','EXP','FIX','FUP','ROUND','LN','SIN','SQRT','TAN','EXISTS'],
     linenumber_command: 'N',
     command: /[ABCDFGHIJKLMPQRSTUVWXYZ]/,
@@ -26,14 +34,30 @@ Math.degrees = function(radians) {
   return radians * 180 / Math.PI;
 };
 
-function empty(d) { return null; };
+function empty(d) {
+    return null;
+}
+
+function logid(prefix) {
+    return function (d) {
+        console.log(prefix, d);
+        return d;
+    };
+}
+
+// Appends to list
 function append(d) {
     if (Array.isArray(d[0])) {
         return d[0].concat(d[2]);
     }
     return [d[0], d[2]];
-};
+}
 
+function getparam(d) {
+    return numberedParams[String(d[1])] | 0.0;
+}
+
+// Returns the result of one parsed line
 function processLine(d) {
 
     if (d[0] != null) {
@@ -41,17 +65,16 @@ function processLine(d) {
     }
 
     if (d[2] != null) {
-        return [d[2]].concat(d[3]);
+        return [d[2]].concat(d[4]);
     }
 
-    return d[3];
-}
-function logid(d) {
-    console.log(d);
-    return d;
+    if (! Array.isArray(d[4])) {
+        return [d[4]];
+    }
+
+    return d[4];
 }
 
-let numberedParams = {};
 
 var grammar = {
     Lexer: lexer,
@@ -67,13 +90,18 @@ var grammar = {
     {"name": "line$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
     {"name": "line$ebnf$2", "symbols": ["linenumber"], "postprocess": id},
     {"name": "line$ebnf$2", "symbols": [], "postprocess": function(d) {return null;}},
-    {"name": "line", "symbols": ["line$ebnf$1", "_", "line$ebnf$2", "words", "EOL"], "postprocess": processLine},
-    {"name": "words", "symbols": ["word"], "postprocess": id},
-    {"name": "words", "symbols": ["words", "_", "word"], "postprocess": append},
+    {"name": "line", "symbols": ["line$ebnf$1", "line$ebnf$2", "line_items", "EOL"], "postprocess": processLine},
     {"name": "block_delete", "symbols": [{"literal":"/"}], "postprocess": id},
-    {"name": "EOL", "symbols": [(lexer.has("EOL") ? {type: "EOL"} : EOL)], "postprocess": empty},
-    {"name": "linenumber", "symbols": [(lexer.has("linenumber_command") ? {type: "linenumber_command"} : linenumber_command), "int_or_float"], "postprocess": function (d) { return {command: d[0].value, value: d[1]}; }},
-    {"name": "word", "symbols": [(lexer.has("command") ? {type: "command"} : command), "_", "number"], "postprocess": function (d) { return {command: d[0].value, value: d[2]}; }},
+    {"name": "linenumber", "symbols": ["_", (lexer.has("linenumber_command") ? {type: "linenumber_command"} : linenumber_command), "int_or_float", "_"], "postprocess": function (d) { return {command: d[1].value, value: d[2]}; }},
+    {"name": "line_items", "symbols": ["line_item"], "postprocess": id},
+    {"name": "line_items", "symbols": ["line_items", "_", "line_item"], "postprocess": append},
+    {"name": "line_item", "symbols": ["comment"], "postprocess": id},
+    {"name": "line_item", "symbols": ["parameter_setting"], "postprocess": id},
+    {"name": "line_item", "symbols": ["word"], "postprocess": id},
+    {"name": "word", "symbols": [(lexer.has("command") ? {type: "command"} : command), "_", "number"], "postprocess": function (d) { let lex = Object.assign({}, lexer); return {command: d[0].value, value: d[2], lexer: lex}; }},
+    {"name": "parameter_start", "symbols": [(lexer.has("paramstart") ? {type: "paramstart"} : paramstart)], "postprocess": id},
+    {"name": "parameter_setting", "symbols": ["parameter_start", "parameter_index", "_", (lexer.has("equals") ? {type: "equals"} : equals), "_", "number"], "postprocess": function (d) { return {command: d[0].value + d[1], value: d[5]}; }},
+    {"name": "comment", "symbols": [(lexer.has("comment") ? {type: "comment"} : comment)], "postprocess": function (d) { return {command: 'COMMENT', value: d[0].value}; }},
     {"name": "gcode_expression", "symbols": [{"literal":"["}, "_", "expression", "_", {"literal":"]"}], "postprocess": (d) => d[2]},
     {"name": "expression", "symbols": ["logical_expression"], "postprocess": id},
     {"name": "logical_expression", "symbols": ["comparative_expression"], "postprocess": id},
@@ -116,8 +144,16 @@ var grammar = {
     {"name": "number", "symbols": ["_", {"literal":"+"}, "number"], "postprocess": (d) => d[2] * 1},
     {"name": "primary", "symbols": ["int_or_float"], "postprocess": id},
     {"name": "primary", "symbols": ["gcode_expression"], "postprocess": id},
-    {"name": "int_or_float", "symbols": [(lexer.has("int") ? {type: "int"} : int)], "postprocess": (d) => parseInt(d[0])},
-    {"name": "int_or_float", "symbols": [(lexer.has("float") ? {type: "float"} : float)], "postprocess": (d) => parseFloat(d[0])}
+    {"name": "primary", "symbols": ["parameter_expression"], "postprocess": id},
+    {"name": "parameter_expression", "symbols": ["parameter_start", "parameter_index"], "postprocess": getparam},
+    {"name": "parameter_index", "symbols": ["int"], "postprocess": id},
+    {"name": "parameter_index", "symbols": ["gcode_expression"], "postprocess": id},
+    {"name": "parameter_index", "symbols": ["parameter_expression"], "postprocess": id},
+    {"name": "int_or_float", "symbols": ["int"], "postprocess": id},
+    {"name": "int_or_float", "symbols": ["float"], "postprocess": id},
+    {"name": "int", "symbols": [(lexer.has("int") ? {type: "int"} : int)], "postprocess": (d) => parseInt(d[0])},
+    {"name": "float", "symbols": [(lexer.has("float") ? {type: "float"} : float)], "postprocess": (d) => parseFloat(d[0])},
+    {"name": "EOL", "symbols": [(lexer.has("EOL") ? {type: "EOL"} : EOL)], "postprocess": empty}
 ]
   , ParserStart: "line"
 }

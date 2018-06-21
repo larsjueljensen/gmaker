@@ -43,10 +43,10 @@ class GParser {
 GParser.REGEX_WORD = /[GgMmXxYyZzIiJjKkRrPpFf](\-?[\d\.]+|\[.*?\])/g;
 
 GParser.G_COMMANDS = [
-    {'G0', ['X', 'Y', 'Z']},
-    {'G1', ['X', 'Y', 'Z', 'F']}, // Move
-    {'G2', ['X', 'Y', 'Z', 'I', 'J', 'K', 'R', 'P', 'F']},
-    {'G3', ['X', 'Y', 'Z', 'I', 'J', 'K', 'R', 'P', 'F']}, // Arc move
+//    {'G0', ['X', 'Y', 'Z']},
+//    {'G1', ['X', 'Y', 'Z', 'F']}, // Move
+//    {'G2', ['X', 'Y', 'Z', 'I', 'J', 'K', 'R', 'P', 'F']},
+//    {'G3', ['X', 'Y', 'Z', 'I', 'J', 'K', 'R', 'P', 'F']}, // Arc move
     'G4', // Dwell
     'G5', 'G5.1', 'G5.2', // Splines
     'G7', 'G8', // Diameter / radius mode (for lathes)

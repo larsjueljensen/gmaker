@@ -4,13 +4,24 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "compile-parser": "nearleyc src/gcode.ne -o src/gcode.js",
+    "pretest": "echo 'Running tests...' && npm run lint",
+    "test": "mocha test -u bdd -R spec",
+    "posttest": "echo 'Finished running tests!'",
+    "lint": "jshint src --exclude=src/gcode.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "express": "^4.16.3",
     "moo": "^0.4.3",
     "nearley": "^2.13.0",
-    "paper": "^0.11.5"
+    "paper": "^0.11.5",
+    "requirejs": "^2.3.5"
+  },
+  "devDependencies": {
+    "jshint": "^2.9.5",
+    "mocha": "^5.1.1",
+    "should": "^13.2.1"
   }
 }

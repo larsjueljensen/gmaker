@@ -8,45 +8,208 @@
                 height: 100%;
                 position: absolute;
             }
-            div {
+
+            #header {
                 position: fixed;
                 top: 10px;
+                height: 60px;
+                left: 10px;
+                right: 10px;
+                font-size: 2rem;
+                line-height: 60px;
+                font-family: sans-serif;
+                vertical-align: middle;
+                border: 1px solid #ced4da;
+                border-radius: .25rem;
+                padding-left: 20px;
+            }
+
+            #textual {
+                position: fixed;
+                top: 80px;
+                left: 10px;
+                bottom: 10px;
+                right: 50%;
+                border: none;
+            }
+
+            #textual textarea, #surface {
+                display: block;
+                font-size: 1rem;
+                line-height: 1.5;
+                width: 100%;
+                height: 100%;
+                resize: none;
+                outline: none;
+                box-sizing: border-box;
+                border: none;
+                white-space: nowrap;
+                padding: .375rem .75rem;
+                color: #495057;
+                background-color: #fff;
+                background-clip: padding-box;
+                border: 1px solid #ced4da;
+                border-radius: .25rem;
+                transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+            }
+
+            #visual {
+                position: fixed;
+                top: 80px;
                 right: 10px;
                 bottom: 10px;
-                left: 350px;
-                border: 1px solid black;
+                left: 50%;
+                border: none;
                 overflow: auto;
                 background-clip: padding-box;
             }
-            #surface {
-                width: 100%;
-                height: 100%;
-            }
-        </style>
-        <script src="../node_modules/paper/dist/paper-full.js"></script>
 
+        </style>
+        <script src="../node_modules/nearley/lib/nearley.js"></script>
+        <script src="../node_modules/moo/moo.js"></script>
+        <script src="gcode.js"></script>
+        <script src="../node_modules/paper/dist/paper-full.js"></script>
         <script type="text/paperscript" canvas="surface">
 
-            // Create a Paper.js Path to draw a line into it:
-        	var path = new Path();
+            view.matrix.scale(2, -2);
 
-        	// Give the stroke a color
-        	path.strokeColor = 'black';
-            path.strokeWidth = 0.5;
-        	var start = new Point(100, 100);
+            function clear() {
+                project.activeLayer.removeChildren();
+                view.draw();
+            }
 
-        	// Move to start and draw a line from there
-        	path.moveTo(start);
+            function color(path, color) {
+                path.strokeColor = color;
+                path.strokeWidth = 0.5;
+                return path;
+            }
 
-        	// Note the plus operator on Point objects.
-        	// PaperScript does that for us, and much more!
-        	path.lineTo(start + [ 100, -50 ]);
-            path.selected = true;
+            function black(path) {
+                return color(path, 'black');
+            }
+
+            function drawLine(posA, posB) {
+                // Create a Paper.js Path to draw a line into it:
+            	var path = new Path.Line(new Point(posA.x, posA.y), new Point(posB.x, posB.y));
+
+            	// Give the stroke a color
+            	path.strokeColor = 'black';
+                path.strokeWidth = 0.5;
+            }
+
+            function edge(pointA, pointB) {
+                return (pointB.x - pointA.x) * (pointB.y + pointA.y);
+            }
+
+            function isClockWise(pointA, pointB, pointC) {
+                var sum = edge(pointA, pointB);
+                sum += edge(pointB, pointC);
+                sum += edge(pointC, pointA);
+                return sum > 0;
+            }
+
+            function drawArcCenterFormat(posA, posB, offset, clockwise) {
+
+                var from = new Point(posA.x, posA.y);
+                var to = new Point (posB.x, posB.y);
+                var center = from + new Point(offset.i, offset.j);
+                var radius = (center - from).length;
+
+                if (from.equals(to)) {
+                    black(new Path.circle(center, radius));
+                } else {
+                    var lineMiddle = from + ((to - from) * 0.5);
+                    var vector = lineMiddle - center;
+                    vector.length = radius;
+                    if (clockwise !== isClockWise(center, from, to)) {
+                        vector = vector * -1;
+                    }
+                    var through = center + vector;
+                    black(new Path.Arc(from, through, to));
+                }
+            }
+
+            function intersection(x0, y0, r0, x1, y1, r1) {
+                var a, dx, dy, d, h, rx, ry;
+                var x2, y2;
+
+                /* dx and dy are the vertical and horizontal distances between
+                 * the circle centers.
+                 */
+                dx = x1 - x0;
+                dy = y1 - y0;
+
+                /* Determine the straight-line distance between the centers. */
+                d = Math.sqrt((dy*dy) + (dx*dx));
+
+                /* Check for solvability. */
+                if (d > (r0 + r1)) {
+                    /* no solution. circles do not intersect. */
+                    return false;
+                }
+                if (d < Math.abs(r0 - r1)) {
+                    /* no solution. one circle is contained in the other */
+                    return false;
+                }
+
+                /* 'point 2' is the point where the line through the circle
+                 * intersection points crosses the line between the circle
+                 * centers.
+                 */
+
+                /* Determine the distance from point 0 to point 2. */
+                a = ((r0*r0) - (r1*r1) + (d*d)) / (2.0 * d) ;
+
+                /* Determine the coordinates of point 2. */
+                x2 = x0 + (dx * a/d);
+                y2 = y0 + (dy * a/d);
+
+                /* Determine the distance from point 2 to either of the
+                 * intersection points.
+                 */
+                h = Math.sqrt((r0*r0) - (a*a));
+
+                /* Now determine the offsets of the intersection points from
+                 * point 2.
+                 */
+                rx = -dy * (h/d);
+                ry = dx * (h/d);
+
+                /* Determine the absolute intersection points. */
+                var xi = x2 + rx;
+                var xi_prime = x2 - rx;
+                var yi = y2 + ry;
+                var yi_prime = y2 - ry;
+
+                return [xi, xi_prime, yi, yi_prime];
+            }
+
+            function drawArcRadiusFormat(posA, posB, radius, clockwise) {
+                // Find points where circles intersect
+                var centres = intersection(posA.x, posA.y, radius, posB.x, posB.y, radius);
+                if (centres) {
+                    if (radius < 0) {
+
+                    }
+                }
+            }
+
+            window.clear = clear;
+            window.drawLine = drawLine;
+            window.drawArcCenterFormat = drawArcCenterFormat;
+            window.drawArcRadiusFormat = drawArcRadiusFormat;
 
         </script>
+        <script src="gcode-to-visual.js"></script>
     </head>
     <body>
-        <div>
+        <div id="header">
+            <label>GMaker v1.0.0 - GCode editor</label>
+        </div>
+        <div id="textual">
+            <textarea onkeyup="onKeyUp(event)"></textarea>
+        </div>
+        <div id="visual">
             <canvas id="surface"></canvas>
         </div>
     </body>
