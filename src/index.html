@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
     <head>
-        <title>GMaker V1.0.0</title>
+        <title>GMaker</title>
         <style>
             body {
                 width: 100%;
@@ -21,7 +21,15 @@
                 vertical-align: middle;
                 border: 1px solid #ced4da;
                 border-radius: .25rem;
-                padding-left: 20px;
+                padding: 0px 20px;
+            }
+
+            #header .left {
+                float: left;
+            }
+
+            #header .right {
+                float: right;
             }
 
             #textual {
@@ -33,7 +41,7 @@
                 border: none;
             }
 
-            #textual textarea, #surface {
+            #textual textarea, #visual > div {
                 display: block;
                 font-size: 1rem;
                 line-height: 1.5;
@@ -53,15 +61,28 @@
                 transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
             }
 
+            #visual > div {
+
+            }
+
+            #surface {
+                width: 100%;
+                height: 100%;
+            }
+
             #visual {
                 position: fixed;
                 top: 80px;
                 right: 10px;
-                bottom: 10px;
+                bottom: 100px;
                 left: 50%;
                 border: none;
-                overflow: auto;
+                overflow: visible;
                 background-clip: padding-box;
+            }
+
+            input[type=file] {
+                display: none;
             }
 
         </style>
@@ -71,14 +92,59 @@
         <script src="../node_modules/paper/dist/paper-full.js"></script>
         <script type="text/paperscript" canvas="surface">
 
-            view.matrix.scale(2, -2);
+            function drawFrame() {
+                 var frame = new Path.Rectangle(new Point(-1,1), new Point(298, -211));
+                //var frame = new Path.Rectangle(view.center - [50, 50], view.center + [50, 50]);
+                frame.strokeColor = 'gray';
+                frame.strokeWidth = 1.0;
+                return frame;
+            }
+
+
+            view.setZoom(2);
+            view.size = new Size(297, 210);
+            view.matrix.scale(1, -1);
+            view.matrix.translate((view.center - new Point(297 / 2, -210 / 2)));
+
+            var b = new Path.Rectangle(view.bounds);
+            b.strokeColor = 'red';
+            b.strokeWidth = 5.0;
+            //view.matrix.translate((view.bounds.width - view.size.width) / 2.0, -((view.bounds.height - view.size.height) / 2.0));
+
+
+
+            (function (dims) {
+
+                dims.forEach(function (dim) {
+                    var rect = new Path.Rectangle(new Point(0,0), new Point(dim, -dim));
+                    rect.strokeColor = 'black';
+                    rect.strokeWidth = 0.5;
+                });
+
+                var p = new Path.Line(0 ,0, 297, -210);
+                p.strokeColor = 'black';
+                p.strokeWidth = 0.5;
+            }([10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160]));
+
+            var frame = drawFrame();
 
             function clear() {
                 project.activeLayer.removeChildren();
+                drawFrame();
                 view.draw();
             }
 
+            function mouseenter(event) {
+                event.target.selected = true;
+            }
+
+            function mouseleave(event) {
+                event.target.selected = false;
+            }
+
             function color(path, color) {
+                path.onMouseEnter = mouseenter;
+                path.onMouseLeave = mouseleave;
                 path.strokeColor = color;
                 path.strokeWidth = 0.5;
                 return path;
@@ -115,9 +181,9 @@
                 var center = from + new Point(offset.i, offset.j);
                 var radius = (center - from).length;
 
-                if (from.equals(to)) {
+                /*if (from.equals(to)) {
                     black(new Path.circle(center, radius));
-                } else {
+                } else {*/
                     var lineMiddle = from + ((to - from) * 0.5);
                     var vector = lineMiddle - center;
                     vector.length = radius;
@@ -126,7 +192,7 @@
                     }
                     var through = center + vector;
                     black(new Path.Arc(from, through, to));
-                }
+                //}
             }
 
             function intersection(x0, y0, r0, x1, y1, r1) {
@@ -201,16 +267,49 @@
 
         </script>
         <script src="gcode-to-visual.js"></script>
+        <script>
+            function onUpdateGraphic(event) {
+                clear();
+                window.setTimeout(function () {
+                    convertGCodeToVisual(document.querySelector('textarea').value);
+                }, 100);
+
+            }
+
+            function onLoadFile(files) {
+                let file = files[0];
+                let fileReader = new FileReader();
+                fileReader.onload = function () {
+                    document.querySelector('textarea').value = fileReader.result;
+                    onUpdateGraphic();
+                };
+                fileReader.readAsText(file);
+            }
+
+            function onLoadFileStart(event) {
+                document.querySelector('#fileInput').click();
+            }
+
+        </script>
     </head>
     <body>
         <div id="header">
-            <label>GMaker v1.0.0 - GCode editor</label>
+            <div class="left">
+                <label>GMaker - The GCode editor</label>
+            </div>
+            <div class="right">
+                <input type="file" id="fileInput" onchange="onLoadFile(this.files)">
+                <button onclick="onLoadFileStart(event)">Load</button>
+                <button onclick="onUpdateGraphic(event)">Update</button>
+            </div>
         </div>
         <div id="textual">
-            <textarea onkeyup="onKeyUp(event)"></textarea>
+            <textarea></textarea>
         </div>
         <div id="visual">
-            <canvas id="surface"></canvas>
+            <div>
+                <canvas id="surface" style="border: 1px solid black"></canvas>
+            </div>
         </div>
     </body>
 </html>

@@ -7,7 +7,7 @@ let numberedParams = {
 };
 
 const lexer = moo.compile({
-    comment: /\(.*?\)/,
+    comment: /;.*$|\(.*?\)/,
     expstart: /\[/,
     expend: /\]/,
     paramstart: '#',
@@ -52,13 +52,13 @@ function append(d) {
 }
 
 function getparam(d) {
-    return numberedParams[String(d[1])] | 0.0;
+    return numberedParams[String(d[1])] | 0.0;
 }
 
 // Returns the result of one parsed line
 function processLine(d) {
 
-    logid("processLine")(d);
+    //logid("processLine")(d);
 
     if (d[0] != null) {
         return [];
@@ -110,7 +110,7 @@ parameter_start ->
     %paramstart {% id %}
 
 parameter_setting ->
-    parameter_start parameter_index _ %equals _ number {% function (d) { return {command: d[0].value + d[1], value: d[5], pos: lexer}; }  %}
+    parameter_start parameter_index _ %equals _ number {% function (d) { return {command: d[0].value + d[1], value: d[5]}; }  %}
 
 comment ->
     %comment {% function (d) { return {command: 'COMMENT', value: d[0].value}; } %}

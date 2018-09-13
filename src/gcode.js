@@ -9,7 +9,7 @@ let numberedParams = {
 };
 
 const lexer = moo.compile({
-    comment: /\(.*?\)/,
+    comment: /;.*$|\(.*?\)/,
     expstart: /\[/,
     expend: /\]/,
     paramstart: '#',
@@ -60,6 +60,8 @@ function getparam(d) {
 // Returns the result of one parsed line
 function processLine(d) {
 
+    //logid("processLine")(d);
+
     if (d[0] != null) {
         return [];
     }
@@ -98,7 +100,7 @@ var grammar = {
     {"name": "line_item", "symbols": ["comment"], "postprocess": id},
     {"name": "line_item", "symbols": ["parameter_setting"], "postprocess": id},
     {"name": "line_item", "symbols": ["word"], "postprocess": id},
-    {"name": "word", "symbols": [(lexer.has("command") ? {type: "command"} : command), "_", "number"], "postprocess": function (d) { let lex = Object.assign({}, lexer); return {command: d[0].value, value: d[2], lexer: lex}; }},
+    {"name": "word", "symbols": [(lexer.has("command") ? {type: "command"} : command), "_", "number"], "postprocess": function (d) { return {command: d[0].value, value: d[2]}; }},
     {"name": "parameter_start", "symbols": [(lexer.has("paramstart") ? {type: "paramstart"} : paramstart)], "postprocess": id},
     {"name": "parameter_setting", "symbols": ["parameter_start", "parameter_index", "_", (lexer.has("equals") ? {type: "equals"} : equals), "_", "number"], "postprocess": function (d) { return {command: d[0].value + d[1], value: d[5]}; }},
     {"name": "comment", "symbols": [(lexer.has("comment") ? {type: "comment"} : comment)], "postprocess": function (d) { return {command: 'COMMENT', value: d[0].value}; }},

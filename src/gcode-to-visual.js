@@ -114,14 +114,23 @@ function setState(state, word) {
     setSpindle(state, word);
 }
 
-function isAllZero(offset) {
-    return offset.i === 0 && offset.j === 0 && offset.k === 0;
+function isEmpty(object) {
+    return JSON.stringify(object) === '{}';
+}
+
+function positionEquals(posA, posB) {
+    return posA.x === posB.x && posA.y === posB.y;
 }
 
 function calculateNewState(state, words) {
     let newState = clone(state);
-    newState.position.current = clone(newState.position.next);
-    newState.position.offset = {i: 0, j:0, k:0};
+
+    if (! isEmpty(newState.position.next)) {
+        newState.position.current = clone(newState.position.next);
+    }
+
+    //newState.position.next = clone(newState.position.current);
+    newState.position.offset = {};
     newState.position.radius = 0;
 
     for (let i = 0; i < words.length; i++) {
@@ -144,8 +153,8 @@ function convertGCodeToVisual(gcodeAsText) {
         plane: 'XY',
         position: {
             current: { x: 0, y: 0, z: 0 },
-            next: { x: 0, y: 0, z: 0 },
-            offset: { i: 0, j: 0, k: 0 },
+            next: {},
+            offset: {},
             numTurns: 0,
             radius: 0
         },
@@ -170,26 +179,24 @@ function convertStatesToVisual(states) {
 }
 
 function convertStateToVisual(state) {
-    if ([3,4].includes(state.spindle.mode)) {
-        if ([0,1].includes[state.motion]) {
-            if (distance(state.position.current, state.position.next) > 0) {
-                drawLine(state.position.current, state.position.next);
-            }
-        }
-        if (state.motion === 2) { // Clockwise arc
-            if (! isAllZero(state.position.offset)) {
-                drawArcCenterFormat(state.position.current, state.position.next, state.position.offset, true);
-            } else if (state.position.radius !== 0) {
-                drawArcRadiusFormat(state.position.current, state.position.next, state.position.radius, true);
-            }
-        }
 
-        if (state.motion === 3) { // Counterclockwise arc
-            if (state.motion === null) { throw "Motion mode is not set"; }
-            if (! isAllZero(state.position.offset)) {
-                drawArcCenterFormat(state.position.current, state.position.next, state.position.offset, false);
-            } else if (state.position.radius !== 0) {
-                drawArcRadiusFormat(state.position.current, state.position.next, state.position.radius, false);
+    if (! isEmpty(state.position.next)) {
+
+        if (!positionEquals(state.position.current, state.position.next)) {
+            if ([3,4].includes(state.spindle.mode)) { // Linear
+                if ([0,1].includes(state.motion)) {
+                    if (distance(state.position.current, state.position.next) > 0) {
+                        drawLine(state.position.current, state.position.next);
+                    }
+                }
+                if ([2,3].includes(state.motion)) { // Arc
+                    let clockwise = (state.motion === 2);
+                    if (! isEmpty(state.position.offset)) {
+                        drawArcCenterFormat(state.position.current, state.position.next, state.position.offset, clockwise);
+                    } else if (state.position.radius !== 0) {
+                        drawArcRadiusFormat(state.position.current, state.position.next, state.position.radius, clockwise);
+                    }
+                }
             }
         }
     }
@@ -200,10 +207,4 @@ function distance(posA, posB) {
         Math.pow(posA.x - posB.x, 2) +
         Math.pow(posA.y - posB.y, 2)
     );
-}
-
-function onKeyUp(event) {
-    if (event.key === 'Enter') {
-        convertGCodeToVisual(event.target.value);
-    }
-}
+};
