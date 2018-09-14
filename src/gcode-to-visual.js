@@ -58,7 +58,7 @@ function isOffset(word) { return isAny(offsets, word); }
 function isNumTurns(word) { return isAny(numTurns, word); }
 function isFeedRate(word) { return isAny(feedRate, word); }
 function isRadius(word) { return isAny(radius, word); }
-function isSpindleSpeed(word) { return isAny(spindleSpeed, word) }
+function isSpindleSpeed(word) { return isAny(spindleSpeed, word); }
 function isSpindleControl(word) { return spindleControl.includes(upper(word.command) + word.value); }
 
 function setProp(object, word) {
@@ -92,7 +92,7 @@ function setNextPosition(state, word) {
 
 function setSpindle(state, word) {
     if (isSpindleSpeed(word)) {
-        if (word.value < 0) {throw "Spindle speed can not be negative"}
+        if (word.value < 0) {throw "Spindle speed can not be negative";}
         state.spindle.speed = word.value;
     }
 
@@ -207,4 +207,4 @@ function distance(posA, posB) {
         Math.pow(posA.x - posB.x, 2) +
         Math.pow(posA.y - posB.y, 2)
     );
-};
+}
